@@ -22,4 +22,5 @@ func Init() {
 		MessageChan: make(chan *Message, 1000),
 		GroupChan:   make(chan *Group, 100),
 	}
+	go Machine.Run()
 }
