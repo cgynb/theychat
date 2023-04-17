@@ -22,11 +22,11 @@ host = "127.0.0.1"
 port = "6379"
 db = 0
 [mysql]
-user = "root"
-password = "123456"
+user = "debian-sys-maint"
+password = "9nVW7LM3BXm7mFZ9"
 host = "localhost"
 port = "3306"
-dns = ""
+dns = "debian-sys-maint:9nVW7LM3BXm7mFZ9@tcp(localhost:3306)/theychat?charset=utf8mb4&parseTime=True&loc=Local"
 [token]
 secret_key = "cgynbnbznb"
 effect_time = 7200000000000
