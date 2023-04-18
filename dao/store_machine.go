@@ -8,8 +8,10 @@ type Message struct {
 	Text    string
 }
 type Group struct {
-	UserId  uint
-	GroupId string
+	UserId    uint
+	GroupId   string
+	GroupType int8
+	Specify   uint
 }
 type StoreMachine struct {
 	MessageChan chan *Message
@@ -21,7 +23,7 @@ func (stm *StoreMachine) Run() {
 	for {
 		select {
 		case group := <-stm.GroupChan:
-			CreateGroup(group.UserId, group.GroupId)
+			CreateGroup(group.UserId, group.GroupId, group.GroupType, group.Specify)
 		case msg := <-stm.MessageChan:
 			CreateMessage(msg.UserId, msg.GroupId, msg.Text)
 		}

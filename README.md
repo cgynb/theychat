@@ -1,11 +1,12 @@
 # theychat
 
-## 5 operation
+## actions
 1. SendMsg = 0
 2. AddSingleChat = 1
 3. AddGroupChat = 2
 4. JoinSingleChat = 3
 5. JoinGroupChat = 4
+6. Invite = 5
 
 <details>
 <summary>config.toml</summary>

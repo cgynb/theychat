@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
@@ -44,12 +45,7 @@ func WsHandler(c *gin.Context) {
 		Conn: conn,
 	}
 	service.ConnPool.Set(client.ID, client.Conn)
-	defer func(client *service.Client) {
-		client.Conn.Close()
-		if _, notEmpty := service.ConnPool.Get(client.ID); notEmpty {
-			service.ConnPool.Del(client.ID)
-		}
-	}(client)
+	defer disconnect(client)
 
 	for {
 		err := conn.ReadJSON(imsg)
@@ -61,12 +57,21 @@ func WsHandler(c *gin.Context) {
 	}
 }
 
+func disconnect(client *service.Client) {
+	client.Conn.Close()
+	if _, notEmpty := service.ConnPool.Get(client.ID); notEmpty {
+		service.ConnPool.Del(client.ID)
+	}
+}
+
 func broadCast(resp *service.Resp, to []uint) {
 	for _, clientId := range to {
 		// send msg
 		if val, ok := service.ConnPool.Get(clientId); ok && val != nil {
-			to, _ := val.(*websocket.Conn)
-			to.WriteJSON(resp)
+			conn, _ := val.(*websocket.Conn)
+			conn.WriteJSON(resp)
+		} else {
+			fmt.Println("err", clientId)
 		}
 	}
 }

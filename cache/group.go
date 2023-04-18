@@ -13,7 +13,6 @@ func AddGroup(userId uint) (gid string) {
 
 func JoinGroup(cap int, gid string, userId uint) (ok bool) {
 	if RDB.SCard(gid).Val() < int64(cap) {
-		// TODO: join
 		RDB.SAdd(gid, userId)
 		ok = true
 	} else {
@@ -34,4 +33,8 @@ func GetGroupMember(gid string) (members []uint) {
 
 func IsMember(userId uint, gid string) (ok bool) {
 	return RDB.SIsMember(gid, strconv.Itoa(int(userId))).Val()
+}
+
+func HasGroup(gid string) (ok bool) {
+	return RDB.Exists(gid).Val() != 0
 }

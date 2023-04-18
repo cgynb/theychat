@@ -18,7 +18,7 @@ func (sm *SafeMap) Set(key, value any) {
 }
 func (sm *SafeMap) Get(key any) (value any, notEmpty bool) {
 	sm.mutex.RLock()
-	defer sm.mutex.RLocker()
+	defer sm.mutex.RUnlock()
 	value, notEmpty = sm.m[key]
 	return
 }

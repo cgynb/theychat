@@ -17,6 +17,13 @@ const (
 	AddGroupChat
 	JoinSingleChat
 	JoinGroupChat
+	Invite
+)
+
+// group type
+const (
+	SingleChat = 1
+	GroupChat  = 2
 )
 
 type Client struct {
@@ -24,11 +31,21 @@ type Client struct {
 	Conn *websocket.Conn
 }
 
+/*
+To: group id
+Action: action
+Join: target group's id
+Message: message
+Specify: userId, specify a person when raising a single chat | invite person id
+GroupId: invite groupid
+*/
 type InputMessage struct {
-	To      string `json:"to"` //  GroupId
+	To      string `json:"to"`
 	Action  int8   `json:"action"`
-	Join    string `json:"join"` // target join GroupId
+	Join    string `json:"join"`
 	Message string `json:"message"`
+	Specify uint   `json:"specify"`
+	GroupId string `json:"group_id"`
 }
 
 type OutputMessage struct {
@@ -58,7 +75,10 @@ func Chat(client *Client, imsg *InputMessage) (resp *Resp, To []uint) {
 			Message: imsg.Message,
 			Time:    time.Now(),
 		}
-		resp = RespOk(om)
+		resp = RespOk(gin.H{
+			"message": om,
+			"action":  imsg.Action,
+		})
 		To = append(cache.GetGroupMember(imsg.To))
 		dao.Machine.MessageChan <- &dao.Message{
 			UserId:  client.ID,
@@ -69,42 +89,65 @@ func Chat(client *Client, imsg *InputMessage) (resp *Resp, To []uint) {
 		groupId := cache.AddGroup(client.ID)
 		resp = RespOk(gin.H{
 			"group_id": groupId,
+			"action":   imsg.Action,
 		})
 		To = append(To, client.ID)
 		dao.Machine.GroupChan <- &dao.Group{
-			UserId:  client.ID,
-			GroupId: groupId,
+			UserId:    client.ID,
+			GroupId:   groupId,
+			GroupType: SingleChat,
+			Specify:   imsg.Specify,
 		}
 	case AddGroupChat:
 		groupId := cache.AddGroup(client.ID)
 		resp = RespOk(gin.H{
 			"group_id": groupId,
+			"action":   imsg.Action,
 		})
 		To = append(To, client.ID)
 		dao.Machine.GroupChan <- &dao.Group{
-			UserId:  client.ID,
-			GroupId: groupId,
+			UserId:    client.ID,
+			GroupId:   groupId,
+			GroupType: GroupChat,
 		}
 	case JoinSingleChat:
-		ok := cache.JoinGroup(config.Conf.DetailConfig.SingleChatCap, imsg.Join, client.ID)
+		group, ok := dao.GetGroup(imsg.Join)
+		ok = cache.JoinGroup(config.Conf.DetailConfig.SingleChatCap, imsg.Join, client.ID) &&
+			group.IsSingleChat() &&
+			group.IsSpecify(client.ID)
 		if ok {
 			resp = RespOk(gin.H{
-				"join": client.User,
+				"join":   client.User,
+				"action": imsg.Action,
 			})
 			To = append(cache.GetGroupMember(imsg.Join)) // send joiner info
 		} else {
-			resp = RespErr(403, "this group is full")
+			resp = RespErr(403, "join fail")
 			To = append(To, client.ID)
 		}
 	case JoinGroupChat:
-		ok := cache.JoinGroup(config.Conf.DetailConfig.GroupChatCap, imsg.Join, client.ID)
+		group, ok := dao.GetGroup(imsg.Join)
+		ok = cache.JoinGroup(config.Conf.DetailConfig.GroupChatCap, imsg.Join, client.ID) && group.IsGroupChat()
 		if ok {
 			resp = RespOk(gin.H{
-				"join": client.User,
+				"join":   client.User,
+				"action": imsg.Action,
 			})
 			To = append(cache.GetGroupMember(imsg.Join)) // send joiner info
 		} else {
-			resp = RespErr(403, "this group is full")
+			resp = RespErr(403, "join fail")
+			To = append(To, client.ID)
+		}
+	case Invite:
+		ok := cache.HasGroup(imsg.GroupId)
+		if ok {
+			resp = RespOk(gin.H{
+				"group_id": imsg.GroupId,
+				"action":   imsg.Action,
+			})
+			To = append(To, imsg.Specify)
+		} else {
+			resp = RespErr(403, "no such group")
 			To = append(To, client.ID)
 		}
 	default:
@@ -127,7 +170,7 @@ func ChatMessage(args *ChatMessageArgs) (resp *Resp) {
 }
 
 func ChatGroup(args *ChatGroupArgs) (resp *Resp) {
-	gs, ok := dao.GetGroup(args.Page, args.UserId)
+	gs, ok := dao.GetGroups(args.Page, args.UserId)
 	if ok {
 		resp = RespOk(gin.H{
 			"groups": gs,

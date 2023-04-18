@@ -29,11 +29,13 @@ func CreateMessage(userId uint, groupId, text string) (m *model.Message, ok bool
 	return
 }
 
-func CreateGroup(userId uint, groupId string) (g *model.Group, ok bool) {
+func CreateGroup(userId uint, groupId string, groupType int8, specify uint) (g *model.Group, ok bool) {
 	ok = true
 	g = &model.Group{
-		GroupId: groupId,
-		UserId:  userId,
+		GroupId:   groupId,
+		UserId:    userId,
+		GroupType: groupType,
+		Specify:   specify,
 	}
 	result := DB.Create(g)
 	if result.Error != nil {
@@ -42,10 +44,20 @@ func CreateGroup(userId uint, groupId string) (g *model.Group, ok bool) {
 	return
 }
 
-func GetGroup(page int, userId uint) (gs []*model.Group, ok bool) {
+func GetGroups(page int, userId uint) (gs []*model.Group, ok bool) {
 	ok = true
 	result := DB.Where("user_id = ?", userId).
 		Limit(config.Conf.DetailConfig.PageSize).Offset(config.Conf.DetailConfig.PageSize * (page - 1)).Find(&gs)
+	if result.Error != nil {
+		return nil, false
+	}
+	return
+}
+
+func GetGroup(groupId string) (g *model.Group, ok bool) {
+	ok = true
+	g = new(model.Group)
+	result := DB.Where("group_id = ?", groupId).First(g)
 	if result.Error != nil {
 		return nil, false
 	}

@@ -6,9 +6,9 @@ import (
 )
 
 func Router() (r *gin.Engine) {
-	gin.SetMode(gin.ReleaseMode)
+	//gin.SetMode(gin.ReleaseMode)
 	r = gin.New()
-	r.Use(gin.Recovery())
+	r.Use(gin.Logger(), gin.Recovery())
 
 	ping := r.Group("/")
 	ping.GET("/", func(c *gin.Context) {
